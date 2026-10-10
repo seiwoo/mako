@@ -1,0 +1,663 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Makoto AI">
+<style>[hidden]{display:none!important}body{margin:0}</style>
+<title>Makoto AI</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Noto+Sans+JP:wght@400;500;700&family=Zen+Maru+Gothic:wght@500;700&display=swap">
+<style>
+/* Layout: 1 column, left-aligned header, tabs, then a vertical timeline for the plan */
+:root{
+  --bg:#F2F4F3; --surface:#FFFFFF; --ink:#16211E; --muted:#5E6B67; --line:#D9E0DD;
+  --accent:#D9435C; --accent-ink:#FFFFFF; --sea:#2F6F73; --chip:#E6ECE9;
+  --f-display:"Zen Maru Gothic","Hiragino Maru Gothic ProN","Yu Gothic",sans-serif;
+  --f-body:"Noto Sans JP","Hiragino Sans","Yu Gothic",sans-serif;
+  --f-mono:"DM Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0F1715; --surface:#172220; --ink:#E9F0ED; --muted:#9AABA5; --line:#263531;
+    --accent:#FF7088; --accent-ink:#1A0A0E; --sea:#5FB3B8; --chip:#223130; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0F1715; --surface:#172220; --ink:#E9F0ED; --muted:#9AABA5; --line:#263531;
+  --accent:#FF7088; --accent-ink:#1A0A0E; --sea:#5FB3B8; --chip:#223130; color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.7;padding-inline:16px;padding-block:24px 56px}
+main{max-width:720px;margin-inline:auto;display:flex;flex-direction:column;gap:20px}
+h1{font-family:var(--f-display);font-size:2rem;line-height:1.2;margin:0;letter-spacing:.01em}
+h1 span{color:var(--accent)}
+.sub{margin:4px 0 0;color:var(--muted);font-size:.9rem}
+.tabs{display:flex;gap:8px}
+.tab{flex:1;min-width:0;font:inherit;font-weight:700;padding:10px 12px;border:1px solid var(--line);background:var(--surface);color:var(--muted);border-radius:10px;cursor:pointer}
+.tab[aria-selected="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.panel{display:flex;flex-direction:column;gap:16px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{font:inherit;font-size:.9rem;padding:6px 14px;border-radius:999px;border:1px solid var(--line);background:var(--chip);color:var(--ink);cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:700}
+.row{display:flex;flex-wrap:wrap;gap:12px}
+.field{display:flex;flex-direction:column;gap:4px;min-width:0;flex:1 1 140px}
+.field label{font-size:.78rem;color:var(--muted);letter-spacing:.04em}
+select,input[type=time],input[type=search],textarea{font:inherit;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:8px 10px;min-width:0;width:100%}
+textarea{resize:vertical;min-height:72px}
+.btn{font:inherit;font-weight:700;padding:11px 20px;border-radius:10px;border:0;background:var(--accent);color:var(--accent-ink);cursor:pointer;align-self:flex-start}
+.btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+.btn:disabled{opacity:.5;cursor:default}
+.plan{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:20px 18px;display:flex;flex-direction:column;gap:14px}
+.plan h2{font-family:var(--f-display);font-size:1.25rem;margin:0;line-height:1.35;text-wrap:balance}
+.plan .lead{margin:0;color:var(--muted)}
+.day{font-family:var(--f-mono);font-size:.78rem;letter-spacing:.08em;color:var(--sea);margin:6px 0 -6px}
+ol.tl{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+ol.tl li{display:grid;grid-template-columns:4rem 1fr;gap:12px;padding-bottom:18px;position:relative}
+ol.tl li:last-child{padding-bottom:0}
+ol.tl li::before{content:"";position:absolute;left:calc(4rem + 5px);top:.6rem;bottom:-.4rem;width:1px;background:var(--line)}
+ol.tl li:last-child::before{display:none}
+.chk{display:flex;gap:8px;align-items:flex-start;font-size:.88rem}
+.chk input{margin-top:5px;accent-color:var(--accent)}
+.sech{font-family:var(--f-display);font-size:1.1rem;margin:12px 0 0}
+.chip.link{text-decoration:none;display:inline-block}
+.recs{display:flex;flex-direction:column;gap:12px}
+.rec{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px;display:flex;flex-direction:column;gap:4px}
+.rec h3{margin:0;font-family:var(--f-display);font-size:1.05rem;line-height:1.4;overflow-wrap:anywhere}
+.rec .acts{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-top:4px}
+.rec a{font-size:.82rem;color:var(--sea)}
+.btn.sm{padding:5px 12px;font-size:.82rem}
+.t small{display:block;font-size:.74rem;color:var(--muted)}
+.t small.over{color:var(--accent);font-weight:700}
+.mv{margin:0 0 4px;font-size:.78rem;color:var(--muted)}
+.t{font-family:var(--f-mono);font-variant-numeric:tabular-nums;font-weight:500;color:var(--sea);padding-top:1px}
+.stop{position:relative;padding-left:16px;min-width:0}
+.stop::before{content:"";position:absolute;left:-1px;top:.55rem;width:9px;height:9px;border-radius:50%;background:var(--accent)}
+.stop h3{margin:0;font-family:var(--f-display);font-size:1.05rem;line-height:1.4;overflow-wrap:anywhere}
+.meta{margin:0;color:var(--muted);font-size:.82rem}
+.why{margin:4px 0 0;font-size:.9rem}
+.stop a{font-size:.82rem;color:var(--sea)}
+.badge{display:inline-block;font-size:.72rem;padding:0 8px;border-radius:999px;background:var(--chip);color:var(--muted);margin-left:6px;vertical-align:1px}
+.tips{margin:0;padding:12px 14px;background:var(--chip);border-radius:10px;font-size:.88rem}
+.cost{margin:0;font-size:.85rem;color:var(--muted)}
+.list{border:1px solid var(--line);border-radius:12px;background:var(--surface);max-height:360px;overflow-y:auto}
+.item{display:flex;gap:10px;align-items:flex-start;padding:10px 14px;border-bottom:1px solid var(--line);cursor:pointer}
+.item:last-child{border-bottom:0}
+.item input{margin-top:6px;accent-color:var(--accent)}
+.item .n{min-width:0}
+.item b{font-weight:500;overflow-wrap:anywhere}
+.item small{display:block;color:var(--muted)}
+.tray{display:flex;flex-wrap:wrap;align-items:center;gap:12px}
+.count{font-family:var(--f-mono);color:var(--muted)}
+.ai{border-top:1px dashed var(--line);padding-top:16px;display:flex;flex-direction:column;gap:10px}
+.ai h2{font-family:var(--f-display);font-size:1.05rem;margin:0}
+.msg{color:var(--muted);font-size:.9rem;margin:0}
+.foot{color:var(--muted);font-size:.78rem;margin:0}
+@media (prefers-reduced-motion:no-preference){.plan{animation:in .25s ease-out}@keyframes in{from{opacity:.4;transform:translateY(4px)}to{opacity:1;transform:none}}}
+</style>
+
+<main>
+  <header>
+    <h1>Makoto <span>AI</span></h1>
+    <p class="sub">2人のお出かけリスト130か所と、真琴さんが好きそうなお店から、時間と距離を見てデートプランを決めます。</p>
+  </header>
+
+  <div class="tabs" role="tablist">
+    <button class="tab" role="tab" id="tab-mood" aria-selected="true" aria-controls="p-mood">気分から提案</button>
+    <button class="tab" role="tab" id="tab-list" aria-selected="false" aria-controls="p-list">リストから作る</button>
+    <button class="tab" role="tab" id="tab-rec" aria-selected="false" aria-controls="p-rec">おすすめ</button>
+  </div>
+
+  <section class="panel" id="p-mood" role="tabpanel" aria-labelledby="tab-mood">
+    <div class="chips" id="moods" role="group" aria-label="気分"></div>
+    <div class="row">
+      <div class="field"><label for="area">エリア</label><select id="area"></select></div>
+      <div class="field"><label for="budget">デート全体の予算（1人）</label>
+        <select id="budget">
+          <option value="">気にしない</option><option value="3000">〜3,000円</option><option value="6000">〜6,000円</option>
+          <option value="10000">〜10,000円</option><option value="15000">〜15,000円</option><option value="25000">〜25,000円</option>
+        </select></div>
+      <div class="field"><label for="meals">食事の回数</label><select id="meals"><option value="">おまかせ</option><option value="0">食事なし（カフェ中心）</option><option value="1">1回</option><option value="2">2回</option></select></div>
+      <div class="field"><label for="start">開始時間</label><input type="time" id="start" value="11:00"></div>
+      <div class="field"><label for="end">終了時間</label><input type="time" id="end" value="18:00"></div>
+    </div>
+    <label class="chk"><input type="checkbox" id="use-rec" checked> リストにない「おすすめ」のお店も候補に入れる</label>
+    <button class="btn" id="go">この条件で提案する</button>
+    <div id="out-mood"></div>
+    <div class="ai" id="ai" hidden>
+      <h2>Makoto AIに相談する</h2>
+      <p class="msg">その日の状況を自由に書くと、リストの中からプランを組みます。</p>
+      <label for="ai-q" class="msg">相談内容</label>
+      <textarea id="ai-q" placeholder="例: 土曜の午後。雨かもしれない。辛いものが食べたくて、夜は静かに飲みたい"></textarea>
+      <button class="btn ghost" id="ai-go">AIにプランを作ってもらう</button>
+      <div id="out-ai"></div>
+    </div>
+  </section>
+
+  <section class="panel" id="p-list" role="tabpanel" aria-labelledby="tab-list" hidden>
+    <div class="row">
+      <div class="field"><label for="q">店名で検索</label><input type="search" id="q" placeholder="例: カフェ、ピザ、温泉"></div>
+      <div class="field"><label for="f-area">エリア</label><select id="f-area"></select></div>
+    </div>
+    <div class="list" id="list"></div>
+    <div class="tray">
+      <span class="count" id="count">0か所を選択中</span>
+      <div class="field" style="flex:0 0 110px"><label for="start2">開始時間</label><input type="time" id="start2" value="12:00"></div>
+      <div class="field" style="flex:0 0 110px"><label for="end2">終了時間</label><input type="time" id="end2" value="19:00"></div>
+      <button class="btn" id="mk">この順でプランにする</button>
+    </div>
+    <div id="out-list"></div>
+  </section>
+
+  <section class="panel" id="p-rec" role="tabpanel" aria-labelledby="tab-rec" hidden>
+    <p class="msg" id="rec-intro"></p>
+    <div class="recs" id="recs"></div>
+    <h2 class="sech">自分で探す</h2>
+    <p class="msg">ジャンルを押すと、Googleマップでそのエリアのお店が検索されます。いつでも最新の結果が出ます。</p>
+    <div class="field"><label for="srch-area">エリア</label><select id="srch-area"></select></div>
+    <div class="chips" id="genres" role="group" aria-label="ジャンル"></div>
+  </section>
+
+  <p class="foot">場所の座標はGoogleマップの検索結果から取得しています（一部は別の店舗と取り違えている可能性があります）。移動時間は直線距離をもとにした目安で、乗り換えや混雑は含みません。</p>
+</main>
+
+<script>
+const PL=[
+["Balcony by 6th", "eat", 3, 0, 0, "", 4.1, 0, "イタリアン", 35.6612, 139.7406],
+["メゾン ポール・ボキューズ", "eat", 5, 0, 0, "", 4.4, 0, "フレンチ", 35.6495, 139.6988],
+["神楽坂ワイン食堂 entraide", "eat", 4, 0, 0, "予約が取りにくいことで有名", 3.9, 0, "フレンチ", 35.7009, 139.7418],
+["ROSTRO", "cafe", 2, 0, 0, "", 4.5, 0, "コーヒー", 35.667, 139.6918],
+["ドトール珈琲店 綱島西口店", "cafe", 2, 0, 0, "", 3.6, 0, "コーヒー", 35.5369, 139.632],
+["日本橋 天丼 金子半之助 日本橋総本店", "eat", 2, 0, 0, "", 4.2, 0, "天丼", 35.6854, 139.7753],
+["ジャヌ メルカート JANU MERCATO", "eat", 5, 0, 0, "", 3.9, 0, "イタリアン", 35.6621, 139.7408],
+["nephew", "cafe", 2, 0, 0, "", 4, 0, "カフェ", 35.669, 139.6901],
+["北海道めんこい くまちゃん温泉 渋谷店", "eat", 3, 0, 0, "", 3.7, 0, "しゃぶしゃぶ", 35.661, 139.6974],
+["波の", "eat", 3, 0, 0, "", 4.4, 0, "いくら丼", 35.6095, 139.6705],
+["ベトナム料理 PHỞ 89日吉店", "eat", 1, 0, 0, "", 4.4, 0, "ベトナム料理", 35.553, 139.6464],
+["RACINES AOYAMA", "eat", 3, 0, 0, "", 3.6, 0, "レストラン", 35.6677, 139.7131],
+["家系総本山 吉村家", "eat", 2, 0, 0, "", 4.1, 0, "ラーメン", 35.463, 139.6151],
+["Roasted COFFEE LABORATORY 渋谷神南店", "cafe", 2, 0, 0, "", 3.8, 0, "コーヒー", 35.6643, 139.6997],
+["3 STARS PANCAKE", "sweets", 3, 0, 0, "", 4.1, 0, "パンケーキ", 35.5723, 139.6598],
+["カルボナーラ専門店 HASEGAWA神楽坂", "eat", 2, 0, 0, "", 3.9, 0, "イタリアン", 35.701, 139.7406],
+["Bonélan ボネラン", "eat", 4, 0, 0, "", 4, 0, "フレンチ", 35.6675, 139.7069],
+["プリンス芝公園", "spot", 1, 0, 0, "", 4.5, 1, "公園", 35.6562, 139.7472],
+["sew", "eat", 3, 0, 0, "", 3.9, 0, "洋食", 35.6657, 139.6793],
+["焼鳥さむしん", "eat", 2, 0, 0, "", 4.1, 0, "焼き鳥", 35.6845, 139.7645],
+["ONIBUS COFFEE 自由が丘店", "cafe", 2, 0, 0, "", 4.1, 0, "コーヒー", 35.6085, 139.6718],
+["Hills House Sky Room Café&Bar", "cafe", 2, 0, 0, "", 3.5, 0, "カフェ", 35.6612, 139.7406],
+["カンテサンス", "eat", 5, 0, 0, "", 4.5, 0, "フレンチ", 35.6239, 139.7331],
+["PST 東麻布", "eat", 3, 0, 0, "", 4.2, 0, "ピザ", 35.6556, 139.7444],
+["VS PARK 横浜ワールドポーターズ店", "activity", 3, 0, 0, "", 3.7, 0, "屋内遊技場", 35.4544, 139.6379],
+["サライケバブ 日吉店", "eat", 1, 0, 0, "", 4.7, 0, "ケバブ", 35.5541, 139.6461],
+["うなぎ ての字 本丸", "eat", 4, 0, 0, "", 4.3, 0, "うなぎ", 35.6634, 139.7519],
+["築地場外市場", "spot", 2, 0, 0, "", 4.2, 1, "市場", 35.6648, 139.7703],
+["等々力渓谷", "spot", 1, 0, 0, "", 4.2, 1, "景勝地", 35.6039, 139.6462],
+["リンシエメ", "eat", 3, 0, 0, "", 4.3, 0, "イタリアン", 35.6947, 139.8257],
+["うどん 萬田次郎", "eat", 2, 0, 0, "", 4.2, 0, "うどん", 35.6886, 139.7127],
+["Okusawa Factory Coffee and Bakes", "cafe", 1, 0, 0, "", 4.2, 0, "コーヒー・ベーカリー", 35.6022, 139.6722],
+["根津美術館", "spot", 2, 0, 0, "", 4.5, 0, "美術館", 35.6623, 139.7171],
+["THE BELCOMO", "eat", 3, 0, 0, "", 4.1, 0, "レストラン", 35.6695, 139.716],
+["宮益坂のごりょんさん", "eat", 4, 0, 0, "串焼き　予約必須", 4.1, 0, "居酒屋(串焼き)", 35.6609, 139.7057],
+["CuisineR", "eat", 5, 0, 0, "", 4.6, 0, "フレンチ", 35.5047, 138.759],
+["PICICA PICICA PIZZA&PASTA", "eat", 3, 0, 0, "", 4.3, 0, "ピザ", 35.6475, 139.7149],
+["しゃぶしゃぶ れたす 中目黒本店", "eat", 4, 0, 0, "", 4.3, 0, "しゃぶしゃぶ", 35.6428, 139.6987],
+["あぶり 清水 総本店", "eat", 3, 0, 0, "", 3.9, 0, "居酒屋", 35.6651, 139.7575],
+["神奈川県鎌倉市雪ノ下１丁目６", "spot", 1, 0, 0, "", 0, 1, "鎌倉散策", 35.3258, 139.5564],
+["釜元たん米衛恵比寿店", "eat", 2, 0, 0, "", 4.1, 0, "定食", 35.6459, 139.7081],
+["日本橋海鮮丼 つじ半 日本橋本店", "eat", 3, 0, 0, "", 4.4, 0, "海鮮丼", 35.6807, 139.7716],
+["うどん山長 恵比寿店", "eat", 2, 0, 0, "", 4.2, 0, "うどん", 35.6483, 139.7111],
+["一芳台湾水果茶 新大久保店", "sweets", 1, 0, 0, "", 4.1, 0, "タピオカティー", 35.7009, 139.7073],
+["かつお食堂", "eat", 3, 0, 0, "", 4.1, 0, "朝食", 35.6541, 139.7021],
+["茶洒 金田中", "eat", 3, 0, 0, "", 3.8, 0, "和食", 35.6656, 139.7106],
+["まちノ食堂", "eat", 3, 0, 0, "", 4.5, 0, "居酒屋", 35.5532, 139.6454],
+["ごはんや一芯 代官山", "eat", 3, 0, 0, "開店30分前には行く必要あり", 4.3, 0, "和食", 35.6472, 139.7018],
+["Henderson ヘンダーソン", "eat", 3, 0, 0, "", 3.9, 0, "ビストロ", 35.663, 139.6951],
+["アシエンダ デル シエロ", "eat", 3, 0, 0, "", 4.2, 0, "メキシコ料理", 35.6504, 139.7026],
+["ザ パレス ラウンジ", "sweets", 5, 0, 0, "", 4.4, 0, "ラウンジ・パフェ", 35.6844, 139.7614],
+["陶芸教室チルコロ 等々力店", "activity", 3, 0, 0, "", 4.9, 0, "陶芸教室", 35.6107, 139.6522],
+["綱島源泉湯けむりの庄", "spa", 2, 0, 0, "", 4.1, 0, "スーパー銭湯", 35.5307, 139.6452],
+["THE★JOJO WORLD", "activity", 2, 0, 0, "", 4.3, 0, "ホビーショップ", 35.662, 139.6991],
+["スパ ラクーア", "spa", 3, 0, 0, "", 4, 0, "スパ", 35.7071, 139.7531],
+["かかん 富ヶ谷店", "eat", 2, 0, 0, "", 4.3, 0, "四川料理", 35.6664, 139.6924],
+["渋谷区ふれあい植物センター", "spot", 1, 0, 0, "", 3.9, 0, "植物園", 35.6533, 139.7077],
+["THE KEY HIGHLAND NASU", "stay", 5, 0, 0, "", 4.3, 0, "ホテル(那須)", 37.099, 140.0443],
+["TOYOTA ARENA TOKYO", "activity", 3, 0, 0, "", 4.5, 0, "スポーツ観戦", 35.6263, 139.7831],
+["F.ドリーム平塚", "activity", 3, 0, 0, "", 4.4, 1, "ゴーカート(平塚)", 35.3378, 139.3646],
+["七宝麻辣湯 綱島店", "eat", 2, 0, 0, "", 2.8, 0, "麻辣湯", 35.537, 139.6328],
+["èpiù", "sweets", 1, 0, 0, "", 3.6, 0, "アイス", 35.4655, 139.6126],
+["goffo", "eat", 5, 0, 0, "", 3.6, 0, "イタリアン", 35.4652, 139.6133],
+["東京ディズニーランド", "activity", 5, 0, 0, "", 4.6, 1, "テーマパーク", 35.6329, 139.8804],
+["葉山町", "spot", 1, 0, 0, "", 0, 1, "海辺散歩", 35.2706, 139.5793],
+["THE UPPER", "eat", 4, 0, 0, "", 4, 0, "フレンチ", 35.6844, 139.7641],
+["Dボルダリング綱島", "activity", 2, 0, 0, "", 4.3, 0, "ボルダリング", 35.5361, 139.6335],
+["PAZZO DI PIZZA", "eat", 2, 0, 0, "", 4.7, 0, "ピザ", 35.6956, 139.698],
+["CANAL CAFE", "cafe", 3, 0, 0, "", 3.9, 0, "カフェ(水辺)", 35.7001, 139.7427],
+["Princess Tart 中目黒", "sweets", 2, 0, 0, "", 4.4, 0, "タルト", 35.6442, 139.7],
+["LOOPS", "cafe", 3, 0, 0, "", 2.9, 0, "カフェ", 35.6366, 139.7401],
+["TAKANAWA GATEWAY CITY", "spot", 1, 0, 0, "", 4.1, 0, "商業施設", 35.6357, 139.7402],
+["東郷神社", "spot", 1, 0, 0, "", 4.3, 1, "神社", 35.6717, 139.7058],
+["I'm donut ？横浜臨港パーク", "sweets", 2, 0, 0, "", 3.3, 1, "ドーナツ", 35.4624, 139.6369],
+["ウメヤキッチン", "eat", 2, 0, 0, "", 4.2, 0, "鶏料理", 35.4466, 139.6315],
+["軽井沢ガーデンファームいちご園", "activity", 2, 0, 0, "", 4.3, 1, "いちご狩り", 36.3096, 138.5904],
+["BEB5軽井沢 by 星野リゾート", "stay", 5, 0, 0, "", 4.2, 0, "ホテル(軽井沢)", 36.3561, 138.5886],
+["緑翠亭 景水", "stay", 5, 0, 0, "", 4, 0, "旅館", 36.5314, 137.8084],
+["御宿 瑞鷹", "stay", 5, 0, 0, "", 4.1, 0, "旅館", 35.1431, 139.0719],
+["QUAYS pacific grill", "eat", 3, 0, 0, "", 4.2, 0, "アメリカ料理", 35.4559, 139.6414],
+["武蔵小杉 大衆焼肉 暴飲暴食", "eat", 4, 0, 0, "", 4.3, 0, "焼肉", 35.5731, 139.6571],
+["ル・パルフェ 馬車道", "sweets", 2, 0, 0, "", 4.3, 0, "パフェ", 35.4475, 139.6356],
+["UNI COFFEE ROASTERY 横浜モアーズ店", "cafe", 2, 0, 0, "", 3.2, 0, "コーヒー", 35.4674, 139.6224],
+["PARLOR NOON", "cafe", 2, 0, 0, "", 3.6, 0, "カフェ", 35.6328, 139.7154],
+["メゾン ビヤンネートル", "cafe", 3, 0, 0, "", 4.3, 0, "カフェ", 35.6692, 139.6823],
+["パティスリー ビヤンネートル", "sweets", 2, 0, 0, "", 3.9, 0, "ペストリー", 35.6682, 139.6825],
+["INITIAL Omotesando", "cafe", 3, 0, 0, "", 4.1, 0, "パフェ・カフェ", 35.6661, 139.7045],
+["TUTU", "eat", 2, 0, 0, "", 4.1, 0, "イタリアン", 35.6274, 139.6844],
+["BOOK AND SONS", "spot", 1, 0, 0, "", 4.5, 0, "古書店", 35.6306, 139.6871],
+["神乃珈琲 目黒店", "cafe", 2, 0, 0, "", 4.1, 0, "コーヒー", 35.6285, 139.6941],
+["oar みなとみらい", "eat", 3, 0, 0, "", 3.4, 0, "イタリアン", 35.4585, 139.6297],
+["BASEGATE横浜関内", "spot", 1, 0, 0, "", 3.8, 0, "商業施設", 35.4441, 139.6378],
+["RAKU SPA 鶴見", "spa", 2, 0, 0, "", 4, 0, "スーパー銭湯", 35.523, 139.6778],
+["ヱビス ブルワリー トウキョウ", "spot", 2, 0, 0, "", 4.4, 0, "ビール博物館", 35.6429, 139.7144],
+["unknown", "bar", 3, 0, 0, "", 4.4, 0, "バー", 35.6486, 139.7098],
+["ドランカー 恵比寿店", "eat", 4, 0, 0, "", 4.3, 0, "ビストロ・居酒屋", 35.6455, 139.7175],
+["まぐろや", "eat", 2, 0, 0, "", 4, 0, "魚介", 35.1035, 139.079],
+["いちごBonBon ATAMI HOUSE", "sweets", 1, 0, 0, "", 4, 0, "デザート", 35.102, 139.0772],
+["牛タン いち江", "eat", 4, 0, 0, "", 4.2, 0, "牛タン", 35.0952, 139.073],
+["ハレのヒ", "eat", 3, 0, 0, "", 4.5, 0, "レストラン", 35.0943, 139.0747],
+["徳造丸 海鮮家 直売所 熱海駅前店", "spot", 2, 0, 0, "", 3.4, 0, "海鮮・お土産", 35.1024, 139.0771],
+["熱海ミルチーズ", "sweets", 1, 0, 0, "", 4, 0, "デザート", 35.1019, 139.0769],
+["一夜城ヨロイヅカファーム", "cafe", 2, 0, 0, "", 4.1, 0, "カフェ(小田原)", 35.234, 139.1289],
+["魚とや", "eat", 3, 0, 0, "", 4.3, 0, "海鮮", 35.1023, 139.0772],
+["ホテル森の風箱根仙石原", "stay", 5, 0, 0, "", 4.5, 0, "ホテル(箱根)", 35.2643, 139.011],
+["箱根ふうら", "stay", 5, 0, 0, "", 4.3, 0, "ホテル(箱根)", 35.2736, 139.0159],
+["熱海青葉舎", "cafe", 2, 0, 0, "", 4.3, 0, "カフェ", 35.0939, 139.0736],
+["デザート専門店 Choud La mer", "sweets", 2, 0, 0, "", 4.8, 0, "シュークリーム", 35.0871, 139.0631],
+["聖林館", "eat", 3, 0, 0, "", 4.1, 0, "ピザ", 35.6429, 139.699],
+["花水庭おおや", "stay", 5, 0, 0, "", 4.2, 0, "旅館", 35.5033, 138.7687],
+["CAFÉ AUX BACCHANALES 桜木町店", "eat", 2, 0, 0, "", 3.5, 0, "ビストロ", 35.4524, 139.6309],
+["AUX BACCHANALES 銀座", "cafe", 2, 0, 0, "", 3.7, 0, "カフェ", 35.6718, 139.7615],
+["PIZZERIA IMOLA", "eat", 3, 0, 0, "", 4, 0, "イタリアン", 35.6028, 139.672],
+["四川麻辣湯 武蔵小杉星星倶楽部", "eat", 2, 0, 0, "", 4.2, 0, "麻辣湯", 35.574, 139.661],
+["Mercedes-Benz Studio Tokyo", "spot", 1, 0, 0, "", 4.1, 0, "イベント会場", 35.6649, 139.7128],
+["酒場のパチモンウォーズ", "eat", 3, 0, 0, "", 4.8, 0, "居酒屋", 34.7077, 135.5084],
+["トゥー・ドッグス・タップルーム", "bar", 3, 0, 0, "", 4.1, 0, "クラフトビール", 35.6627, 139.7352],
+["みそめぼれ 六本木", "eat", 2, 0, 0, "", 4.1, 0, "味噌汁・おにぎり", 35.6625, 139.7342],
+["東京バル Ajito 六本木", "eat", 3, 0, 0, "", 4.1, 0, "イタリアン", 35.665, 139.7327],
+["フォンダ デ ラ マドゥルガーダ", "eat", 4, 0, 0, "", 3.3, 0, "メキシコ料理", 35.6735, 139.7081],
+["Pie Bird", "sweets", 2, 0, 0, "", 4, 0, "パイ", 35.6714, 139.7167],
+["ARBOL 神楽坂", "eat", 3, 0, 0, "", 4.4, 0, "イタリアン", 35.7023, 139.7399],
+["MAISON CLASSIC FACTORY", "sweets", 1, 0, 0, "", 3.8, 0, "デザート", 35.6356, 139.7407],
+["ホテルあかね", "stay", 5, 0, 0, "", 3.9, 0, "ホテル(湯河原)", 35.1462, 139.0957],
+["湯河原 川堰苑 いすゞホテル", "stay", 5, 0, 0, "", 3.7, 0, "ホテル(湯河原)", 35.1418, 139.081],
+["温泉旅館湯さか荘", "stay", 5, 0, 0, "", 4.3, 0, "旅館", 35.2281, 139.0973],
+["伊勢えび・あわびが専門の宿 大野荘", "stay", 5, 0, 0, "", 4.1, 0, "旅館", 35.1854, 140.3584],
+["粋松亭", "stay", 5, 0, 0, "", 4.3, 0, "ホテル", 34.9119, 138.7895],
+["モンスーンカフェ 自由が丘", "eat", 3, 0, 0, "", 4.2, 0, "エスニック", 35.6088, 139.6692],
+["Mi Familia", "eat", 3, 0, 0, "", 4.2, 0, "メキシコ料理", 35.6622, 139.7465],
+["Kebab Chefs ケバブ シェフス 渋谷", "eat", 2, 0, 0, "リストの「伝説のケバブ屋さん」(サライケバブ)が好きなら。渋谷で評価4.8と高く、軽く食べたいときに。", 4.8, 0, "ケバブ", 35.6563, 139.7049, 1],
+["李暁七マーラータン 新大久保店", "eat", 2, 0, 0, "麻辣湯をいくつも行きたい店に入れているので。新大久保で評価4.7、レビューも1,000件超えです。", 4.7, 0, "麻辣湯", 35.7005, 139.6998, 1],
+["Seafood Restaurant Seagen", "eat", 3, 0, 0, "いくら丼や海鮮丼(波の・つじ半・魚とや)が好きな流れで。築地で評価4.7。", 4.7, 0, "海鮮", 35.6649, 139.7705, 1],
+["笠川 海鮮丼(Kasagawa Seafood Bowls)", "eat", 3, 0, 0, "海鮮丼が好きなら。築地場外市場とセットで回れます。", 4.5, 0, "海鮮丼", 35.6655, 139.7697, 1],
+["香川一福 ART", "eat", 2, 0, 0, "うどん好き(山長・萬田次郎)なら。渋谷で評価4.6、レビュー2,000件超えの人気店。", 4.6, 0, "うどん", 35.6567, 139.7044, 1],
+["BARDEBIS", "eat", 3, 0, 0, "ビストロ系のおしゃれな店(ドランカー・ヘンダーソン)が好きそうなので。恵比寿で評価4.6。", 4.6, 0, "スペインバル", 35.6463, 139.7146, 1],
+["Braceria Delizioso Italia", "eat", 3, 0, 0, "カルボナーラやピザなどイタリアンが好きなので。恵比寿でワインと一緒に。", 4.5, 0, "イタリアン", 35.6456, 139.7151, 1],
+["ラ スタツィオーネ デッラ ピッツァ", "eat", 3, 0, 0, "「ピザ巡り」をしたいという一言から。奥沢の小さなピザ店で、陶芸体験の等々力からも近いです。", 4.5, 0, "ピザ", 35.6063, 139.6664, 1],
+["pizza marumo", "eat", 3, 0, 0, "ピザ巡り候補に。恵比寿南で評価4.4、レビュー1,400件超え。", 4.4, 0, "ピザ", 35.6453, 139.7085, 1],
+["PIZZA17", "eat", 3, 0, 0, "ピザ巡り候補に。自由が丘の散歩のついでに寄れます。", 4.4, 0, "ピザ", 35.6072, 139.6667, 1],
+["Zest Cantina 代官山", "eat", 3, 0, 0, "メキシコ料理(アシエンダ・Mi Familia)が好きそうなので。代官山で落ち着いて食べられます。", 4.4, 0, "メキシコ料理", 35.6497, 139.7027, 1],
+["THAO'S BANH MI", "eat", 2, 0, 0, "ベトナム料理(PHỞ 89)が気になっているので。武蔵小杉の3 STARS PANCAKEや麻辣湯と同じ日に。", 4.4, 0, "ベトナム料理", 35.5655, 139.6549, 1],
+["Arrocería Sal y Amor", "eat", 3, 0, 0, "おしゃれで特別感のある店が好きそうなので。代官山で、記念日にも使えます。", 4.4, 0, "パエリア", 35.6508, 139.7035, 1],
+["串むすび・吉", "eat", 3, 0, 0, "串焼きの「宮益坂のごりょんさん」が気になっているので、予約が取りやすそうな恵比寿の候補として。", 4.3, 0, "串焼き", 35.6486, 139.7086, 1],
+["うどん いろは(表参道)", "eat", 2, 0, 0, "うどん好きなら。表参道で、INITIALやパティスリーの前後に。", 4.3, 0, "うどん", 35.6697, 139.7072, 1],
+["IL PLEUT SUR LA SEINE", "sweets", 2, 0, 0, "パティスリー・パフェ好き(ビヤンネートル・パレスラウンジ)なら。代官山で、ポール・ボキューズと同じ建物のそばです。", 4.4, 0, "パティスリー", 35.6495, 139.6988, 1]
+];
+const HUBS=[
+['HT','日吉・綱島・武蔵小杉',35.553,139.645],['SB','渋谷・原宿・表参道',35.665,139.703],['EB','恵比寿・代官山・中目黒',35.645,139.705],
+['ME','目黒・学芸大',35.632,139.692],['KG','神楽坂・飯田橋',35.701,139.741],['NB','日本橋・銀座・丸の内',35.678,139.768],
+['MN','六本木・麻布・芝',35.660,139.740],['SN','品川・高輪',35.632,139.737],['SG','自由が丘・等々力・奥沢',35.607,139.668],
+['SJ','新宿・新大久保',35.695,139.700],['YK','横浜',35.455,139.635],['KM','鎌倉・葉山',35.300,139.560],
+['MH','舞浜',35.633,139.880],['OD','お台場・豊洲・青海',35.625,139.780],['ET','亀戸',35.695,139.826],
+['AT','熱海',35.100,139.075,1],['YG','湯河原',35.145,139.092,1],['HK','箱根(仙石原)',35.265,139.015,1],['HY','箱根湯本',35.232,139.100,1],['OW','小田原',35.234,139.129,1],
+['KW','河口湖',35.503,138.768,1],['KZ','軽井沢',36.335,138.590,1],['NS','那須',37.099,140.044,1],['NG','長野・大町',36.531,137.808,1],
+['HR','平塚',35.338,139.365,1],['IZ','伊豆・土肥',34.912,138.789,1],['OJ','御宿(千葉)',35.185,140.358,1],['OS','大阪',34.708,135.509,1]
+];
+const HUB={};HUBS.forEach(h=>HUB[h[0]]={code:h[0],label:h[1],lat:h[2],lng:h[3],far:!!h[4]});
+const KINDS={eat:'食事',cafe:'カフェ',sweets:'スイーツ',bar:'お酒',spot:'おでかけ',activity:'体験',spa:'温泉・スパ',stay:'宿'};
+const RAD=Math.PI/180;
+function km(a,b){const dl=(b.lat-a.lat)*RAD,dg=(b.lng-a.lng)*RAD;const x=Math.sin(dl/2)**2+Math.cos(a.lat*RAD)*Math.cos(b.lat*RAD)*Math.sin(dg/2)**2;return 2*6371*Math.asin(Math.sqrt(x))*1.25}
+const r5=m=>Math.max(5,Math.round(m/5)*5);
+function travel(a,b){
+  const d=km(a,b);
+  if(d<0.15)return{min:5,km:d,mode:'すぐ近く'};
+  if(d<=1.3)return{min:r5(d*13+2),km:d,mode:'徒歩'};
+  if(d<=60)return{min:r5(14+d*2.2),km:d,mode:'電車・車'};
+  return{min:r5(20+d*1.1),km:d,mode:'電車・車'};
+}
+const D=PL.map((a,i)=>{
+  const p={id:i,name:a[0],kind:a[1],price:a[2],visited:!!a[3],check:!!a[4],note:a[5],rating:a[6],out:!!a[7],sub:a[8],lat:a[9],lng:a[10],rec:!!a[11]};
+  let best=null,bd=1e9;HUBS.forEach(h=>{const d=km(p,HUB[h[0]]);if(d<bd){bd=d;best=h[0]}});
+  p.hub=best;p.far=HUB[best].far;
+  p.night=p.kind==='bar'||/居酒屋|バー|ビストロ|ビール|串焼き|焼き鳥|バル/.test(p.sub);
+  return p;
+});
+const DUR={cafe:60,sweets:45,eat:90,bar:90,spot:60,activity:120,spa:120,stay:0};
+const YEN={1:800,2:1500,3:3500,4:7000,5:12000};
+const MOODS={
+  relax:{label:'まったりカフェ',start:'11:00',end:'18:00',blurb:'ゆっくり話せるペースで、移動は少なめにしています。',slots:[{k:['cafe']},{k:['spot','activity']},{k:['sweets','cafe']},{k:['eat'],max:3}]},
+  gourmet:{label:'食べ歩き',start:'11:30',end:'19:00',blurb:'お腹の空き具合に合わせて、軽め→デザート→しっかりの順です。',slots:[{k:['eat'],max:2},{k:['sweets']},{k:['spot','activity']},{k:['eat'],max:4}]},
+  anniv:{label:'記念日・特別な日',start:'14:30',end:'21:30',blurb:'夜は少し良いお店を選びました。予約は早めにどうぞ。',cap:5,slots:[{k:['spot','activity']},{k:['sweets','cafe']},{k:['eat'],min:4}]},
+  active:{label:'体験・アクティブ',start:'10:30',end:'18:00',blurb:'体を動かす・手を動かす体験を真ん中に入れています。',slots:[{k:['cafe']},{k:['activity']},{k:['sweets']},{k:['eat'],max:3}]},
+  onsen:{label:'温泉でゆったり',start:'12:00',end:'20:00',blurb:'お風呂の前後にごはんを置いています。',slots:[{k:['eat'],max:3},{k:['spa']},{k:['eat'],max:4}]},
+  night:{label:'夜デート・お酒',start:'17:00',end:'22:30',blurb:'明るいうちに軽く過ごして、夜はお酒に合うお店へ。',indoor:1,slots:[{k:['cafe','spot','sweets']},{k:['eat'],night:1},{k:['bar','eat'],night:1}]},
+  rain:{label:'雨の日',start:'11:00',end:'18:00',indoor:1,blurb:'屋外の場所は外して、屋内だけで回れるようにしています。',slots:[{k:['cafe']},{k:['activity','spot']},{k:['sweets']},{k:['eat'],max:3}]},
+  trip:{label:'1泊旅行',start:'11:00',end:'16:00',blurb:'リストの宿を1つ選び、その近くのお店だけでつなぎました。',trip:1}
+};
+const toMin=s=>{const m=/^(\d{1,2}):(\d{2})$/.exec(s||'');return m?(+m[1])*60+(+m[2]):NaN};
+const fmt=m=>String(Math.floor(m/60)%24).padStart(2,'0')+':'+String(m%60).padStart(2,'0');
+function rng(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+
+const pcost=p=>p.kind==='stay'?0:p.kind==='spot'?(p.price>=2?1000:0):(YEN[p.price]||0);
+function eligible(p,slot,c){
+  if(c.used.has(p.id)||!slot.k.includes(p.kind))return false;
+  if(p.rec&&!c.rec)return false;
+  if(c.budget&&c.spent+pcost(p)+(c.reserve||0)>c.budget)return false;
+  if(p.kind!=='stay'){
+    if(c.trip){if(km(c.center,p)>15)return false}
+    else{if(p.far)return false;if(km(c.center,p)>4.5)return false;if(c.last&&km(c.last,p)>6)return false}
+  }
+  if(c.indoor&&p.out)return false;
+  if(['eat','cafe','sweets','bar'].includes(p.kind)){if(p.price>Math.min(c.cap,slot.max||5))return false;if(slot.min&&p.price<slot.min)return false}
+  if(slot.night&&!p.night)return false;
+  if(p.kind==='eat'&&c.subs.has(p.sub))return false;
+  return true;
+}
+function pick(slot,c){
+  const list=D.filter(p=>eligible(p,slot,c));
+  if(!list.length)return null;
+  const sc=new Map();
+  list.forEach(p=>{
+    let s=(p.rating||3.8)+(p.visited?-.8:.3)+(p.note?.3:0)+c.rnd()*1.0;
+    if(p.kind!=='stay'){s-=Math.min(km(c.last||c.center,p),10)*.5;s-=Math.min(km(c.center,p),10)*.15}
+    sc.set(p.id,s);
+  });
+  list.sort((a,b)=>sc.get(b.id)-sc.get(a.id));
+  const p=list[0];c.used.add(p.id);c.subs.add(p.sub);c.spent+=pcost(p);if(p.kind!=='stay')c.last=p;return p;
+}
+function schedule(ps,start,from){
+  let t=toMin(start),prev=from||null;
+  return ps.map(p=>{
+    const tr=prev?travel(prev,p):null;
+    if(tr)t+=tr.min;
+    if(p.kind==='stay')t=Math.max(t,15*60);
+    const s=t,e=t+(DUR[p.kind]??60);t=e;prev=p;
+    return{p,time:fmt(s),end:fmt(e),s,e,tr};
+  });
+}
+function why(p){
+  if(p.note)return p.note;
+  return (p.rating?'Google評価 '+p.rating.toFixed(1)+'。':'')+p.sub+'のお店です。';
+}
+function cost(stops){
+  return stops.reduce((s,x)=>{const p=x.p;if(p.kind==='stay')return s;if(p.kind==='spot')return s+(p.price>=2?1000:0);return s+(YEN[p.price]||0)},0);
+}
+function tipsFor(stops){
+  const out=[];
+  stops.forEach(x=>{if(/予約|開店|早め|必要/.test(x.p.note))out.push(x.p.name+'：'+x.p.note.replace(/\s+/g,' '))});
+  return out;
+}
+const travelTotal=stops=>stops.reduce((a,x)=>a+(x.tr?x.tr.min:0),0);
+
+function build(moodKey,hubKey,cap,seed,startT,endT,opt){
+  opt=opt||{};
+  const m=MOODS[moodKey],rnd=rng(seed),end=toMin(endT);
+  const ctx={cap:m.cap||cap,indoor:!!m.indoor,used:new Set(),subs:new Set(),rnd,last:null,trip:!!m.trip,rec:!!opt.rec,budget:+opt.budget||0,spent:0,reserve:0};
+  if(m.trip)return buildTrip(m,moodKey,ctx,startT,end);
+  ctx.center=HUB[hubKey];
+  const slots=mealSlots(m.slots,opt.meals);
+  let ps=slots.map((s,i)=>{ctx.reserve=slots.slice(i+1).filter(x=>!x.k.every(k=>k==='spot')).length*700;return pick(s,ctx)}).filter(Boolean);
+  ctx.reserve=0;
+  const base=ps.length,miss=slots.length-base;
+  if(ps.length<2)return{filled:ps.length,score:0,hubKey};
+  let sch=schedule(ps,startT),dropped=0;
+  while(ps.length>2&&sch[sch.length-1].e>end+10){ps.pop();dropped++;sch=schedule(ps,startT)}
+  let added=0;
+  for(let k=0;k<3&&ps.length<6;k++){
+    if(end-sch[sch.length-1].e<75)break;
+    const x=pick({k:['cafe','sweets','spot'],max:3},ctx);
+    if(!x)break;
+    const lastEat=['eat','bar'].includes(ps[ps.length-1].kind);
+    const trial=lastEat?[...ps.slice(0,-1),x,ps[ps.length-1]]:[...ps,x];
+    const s2=schedule(trial,startT);
+    if(s2[s2.length-1].e<=end+10){ps=trial;sch=s2;added++}else{ctx.used.delete(x.id);break}
+  }
+  const notes=[];
+  if(miss)notes.push(HUB[hubKey].label+'には条件に合う場所が足りず、'+miss+'つの枠を省いています。');
+  if(dropped)notes.push('終了時間('+endT+')に収まるよう、'+dropped+'か所を減らしました。');
+  if(added)notes.push('時間に余裕があったので、'+added+'か所を足しました。');
+  const over=sch[sch.length-1].e>end+10;
+  if(over)notes.push('終了時間を少し過ぎます。');
+  if(ctx.budget&&cost(sch)>ctx.budget)notes.push('予算('+ctx.budget.toLocaleString('ja-JP')+'円)を少し超えます。');
+  const tt=travelTotal(sch);
+  return{moodKey,hubKey,days:[{label:null,stops:sch}],filled:ps.length,score:base*100+ps.reduce((a,p)=>a+(p.rating||3.8),0)-tt*.05,
+    title:m.label+'プラン｜'+HUB[mainHub(ps,hubKey)].label,
+    lead:HUB[mainHub(ps,hubKey)].label+'まわりで、'+ps.length+'か所。'+fmt(sch[0].s)+'〜'+fmt(sch[sch.length-1].e)+'、移動は合計約'+tt+'分。'+m.blurb,
+    tips:[...notes,...tipsFor(sch)],cost:cost(sch)};
+}
+function mealSlots(src,meals){
+  const slots=src.map(s=>({...s}));
+  if(meals===''||meals==null)return slots;
+  const n=+meals,isMeal=s=>s.k.includes('eat')||s.k.includes('bar');
+  const idx=slots.map((s,i)=>isMeal(s)?i:-1).filter(i=>i>=0);
+  idx.slice(0,Math.max(0,idx.length-n)).forEach(i=>{slots[i]={k:['cafe','sweets','spot'],max:3}});
+  for(let k=idx.length;k<n;k++)slots.splice(Math.min(1,slots.length),0,{k:['eat'],max:3});
+  return slots;
+}
+function mainHub(ps,dflt){const c={};ps.forEach(p=>c[p.hub]=(c[p.hub]||0)+1);let b=dflt,n=0;for(const k in c)if(c[k]>n){n=c[k];b=k}return b}
+function buildTrip(m,moodKey,ctx,startT,end){
+  const stays=D.filter(p=>p.kind==='stay'&&D.filter(q=>q.kind!=='stay'&&q.far&&km(p,q)<=15).length>=2);
+  if(!stays.length)return{filled:0,score:0};
+  const st=stays.map(p=>({p,s:(p.rating||3.8)+ctx.rnd()*1.5+(p.note?.3:0)})).sort((a,b)=>b.s-a.s)[0].p;
+  ctx.used.add(st.id);ctx.center=st;
+  const d1=[{k:['eat'],max:3},{k:['spot','sweets','activity','cafe']}].map(s=>pick(s,ctx)).filter(Boolean);
+  ctx.last=st;
+  let d2=[{k:['cafe','sweets']},{k:['eat','spot'],max:3}].map(s=>pick(s,ctx)).filter(Boolean);
+  const s1=schedule([...d1,st],startT);
+  let s2=schedule(d2,'10:00',st);
+  let dropped=0;
+  while(s2.length>1&&s2[s2.length-1].e>end+10){d2.pop();dropped++;s2=schedule(d2,'10:00',st)}
+  const all=[...s1,...s2];
+  const notes=['東京からの移動時間は含んでいません。現地の最寄り駅に着いた時間を開始時間にしてください。'];
+  if(dropped)notes.push('2日目は終了時間('+fmt(end)+')に収まるよう'+dropped+'か所を減らしました。');
+  notes.push(...tipsFor(all));
+  return{moodKey,hubKey:st.hub,days:[{label:'1日目',stops:s1},{label:'2日目',stops:s2}],filled:all.length,score:all.length,
+    title:'1泊旅行プラン｜'+HUB[st.hub].label,lead:'宿は「'+st.name+'」。'+HUB[st.hub].label+'まわりで'+all.length+'か所。'+m.blurb,
+    tips:notes,cost:cost(all),stay:true};
+}
+const AUTO=['HT','SB','EB','ME','KG','NB','MN','SN','SG','SJ','YK'];
+function suggest(moodKey,hubKey,cap,seed,startT,endT,opt){
+  if(hubKey)return build(moodKey,hubKey,cap,seed,startT,endT,opt);
+  if(MOODS[moodKey].trip)return build(moodKey,null,cap,seed,startT,endT,opt);
+  let best=null,bs=-1e9;
+  AUTO.forEach((a,i)=>{const pl=build(moodKey,a,cap,seed+i*17,startT,endT,opt);const s=pl.score+((seed+i)%7)*.3;if(pl.days&&s>bs){bs=s;best=pl}});
+  return best;
+}
+const RANK={cafe:1,spot:2,activity:2,spa:3,sweets:4,eat:5,bar:6,stay:7};
+function orderStops(ps){
+  if(ps.length<2)return ps.slice();
+  const rk=p=>RANK[p.kind]||3;
+  const cost=o=>{let c=0;for(let i=1;i<o.length;i++){c+=travel(o[i-1],o[i]).min;if(rk(o[i])<rk(o[i-1]))c+=30}const si=o.findIndex(p=>p.kind==='stay');if(si>=0&&si<o.length-1)c+=1000;return c};
+  if(ps.length>7){const s=ps.slice().sort((a,b)=>rk(a)-rk(b));const o=[s.shift()];while(s.length){const l=o[o.length-1];s.sort((a,b)=>travel(l,a).min+rk(a)*3-travel(l,b).min-rk(b)*3);o.push(s.shift())}return o}
+  let best=null,bc=1e9;
+  (function perm(a,rest){if(!rest.length){const c=cost(a);if(c<bc){bc=c;best=a}return}for(let i=0;i<rest.length;i++)perm([...a,rest[i]],rest.filter((_,j)=>j!==i))})([],ps);
+  return best;
+}
+const $=s=>document.querySelector(s);
+function h(tag,cls,txt){const e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e}
+function mapUrl(p){return'https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(p.name)}
+function renderPlan(box,plan,endMin){
+  box.replaceChildren();
+  const card=h('article','plan');
+  card.append(h('h2',null,plan.title));
+  if(plan.lead)card.append(h('p','lead',plan.lead));
+  plan.days.forEach((d,di)=>{
+    if(d.label)card.append(h('p','day',d.label));
+    const ol=h('ol','tl');
+    d.stops.forEach(s=>{
+      const p=s.p,li=h('li');
+      const t=h('div','t');t.append(h('span',null,s.time));
+      if(p.kind==='stay')t.append(h('small',null,'チェックイン'));
+      else{const e=h('small',(endMin&&(!plan.days[1]||di===plan.days.length-1)&&s.e>endMin+10)?'over':null,'〜'+s.end);t.append(e)}
+      li.append(t);
+      const st=h('div','stop');
+      if(s.tr&&s.tr.min>0)st.append(h('p','mv','↓ '+s.tr.mode+'約'+s.tr.min+'分（'+s.tr.km.toFixed(1)+'km）'));
+      const hh=h('h3',null,p.name);
+      if(p.visited)hh.append(h('span','badge','行った'));
+      else if(p.check)hh.append(h('span','badge','✅リスト'));
+      if(p.rec)hh.append(h('span','badge','おすすめ'));
+      st.append(hh);
+      const meta=[HUB[p.hub].label,KINDS[p.kind],p.sub,p.kind==='stay'?null:('¥'.repeat(Math.min(p.price,5))),p.rating?'★'+p.rating.toFixed(1):null].filter(Boolean).join(' · ');
+      st.append(h('p','meta',meta));
+      st.append(h('p','why',s.why||why(p)));
+      const a=h('a',null,'地図で開く');a.href=mapUrl(p);a.target='_blank';a.rel='noopener';
+      st.append(a);li.append(st);ol.append(li);
+    });
+    card.append(ol);
+  });
+  if(plan.tips&&plan.tips.length){const t=h('p','tips');plan.tips.forEach((x,i)=>{if(i)t.append(document.createElement('br'));t.append('・'+x)});card.append(t)}
+  if(plan.cost!=null)card.append(h('p','cost','1人あたりの目安：約'+plan.cost.toLocaleString('ja-JP')+'円'+(plan.stay?'（宿泊費は別）':'')));
+  box.append(card);
+}
+function timesOk(a,b,out){
+  const s=toMin(a),e=toMin(b);
+  if(isNaN(s)||isNaN(e)){out.replaceChildren(h('p','msg','開始時間と終了時間を入力してください。'));return false}
+  if(e<=s+60){out.replaceChildren(h('p','msg','終了時間は開始時間より1時間以上あとにしてください。'));return false}
+  return true;
+}
+
+/* mood tab */
+let mood='relax',seed=Number(new Date().toISOString().slice(0,10).replace(/-/g,''));
+const moodsEl=$('#moods');
+Object.entries(MOODS).forEach(([k,m])=>{
+  const b=h('button','chip',m.label);b.type='button';b.setAttribute('aria-pressed',String(k===mood));
+  b.onclick=()=>{mood=k;moodsEl.querySelectorAll('.chip').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));$('#start').value=m.start;$('#end').value=m.end;run()};
+  moodsEl.append(b);
+});
+const areaSel=$('#area'),fArea=$('#f-area');
+areaSel.append(new Option('おまかせ',''));fArea.append(new Option('すべて',''));
+HUBS.forEach(hh=>{const n=D.filter(p=>p.hub===hh[0]).length;if(!n)return;if(!hh[4]&&n>=3)areaSel.append(new Option(hh[1]+'（'+n+'か所）',hh[0]));fArea.append(new Option(hh[1]+'（'+n+'）',hh[0]))});
+function run(){
+  const out=$('#out-mood');
+  if(!timesOk($('#start').value,$('#end').value,out))return;
+  seed+=1;
+  const pl=suggest(mood,areaSel.value,5,seed,$('#start').value,$('#end').value,{meals:$('#meals').value,rec:$('#use-rec').checked,budget:$('#budget').value});
+  if(!pl||!pl.days||pl.filled<2){out.replaceChildren(h('p','msg','この条件に合う場所が足りません。エリア・予算・時間を変えてみてください。'));return}
+  renderPlan(out,pl,toMin($('#end').value));
+}
+$('#go').onclick=run;
+
+/* list tab */
+const sel=new Set();
+function updCount(){$('#count').textContent=sel.size+'か所を選択中'}
+function drawList(){
+  const q=$('#q').value.trim().toLowerCase(),a=fArea.value;
+  const box=$('#list');box.replaceChildren();
+  D.filter(p=>(!a||p.hub===a)&&(!q||(p.name+p.sub+KINDS[p.kind]).toLowerCase().includes(q))).forEach(p=>{
+    const lab=h('label','item');
+    const cb=h('input');cb.type='checkbox';cb.checked=sel.has(p.id);
+    cb.onchange=()=>{cb.checked?sel.add(p.id):sel.delete(p.id);updCount()};
+    const n=h('div','n');n.append(h('b',null,p.name));if(p.rec)n.querySelector('b').append(h('span','badge','おすすめ'));
+    n.append(h('small',null,[HUB[p.hub].label,KINDS[p.kind],p.sub].join(' · ')));
+    lab.append(cb,n);box.append(lab);
+  });
+  if(!box.children.length)box.append(h('p','msg','該当する場所がありません。'));
+}
+$('#q').oninput=drawList;fArea.onchange=drawList;
+$('#mk').onclick=()=>{
+  const out=$('#out-list');
+  if(!timesOk($('#start2').value,$('#end2').value,out))return;
+  const ps=[...sel].map(i=>D[i]);
+  if(ps.length<1){out.replaceChildren(h('p','msg','場所を1つ以上選んでください。'));return}
+  const sorted=orderStops(ps);
+  const stops=schedule(sorted,$('#start2').value);
+  const end=toMin($('#end2').value),last=stops[stops.length-1];
+  const tt=travelTotal(stops),hubs=[...new Set(sorted.map(p=>HUB[p.hub].label))];
+  const tips=[];
+  const lateN=stops.filter(s=>s.e>end+10&&s.p.kind!=='stay').length;
+  if(last.e>end+10)tips.push('終了時間('+$('#end2').value+')を'+(last.e-end)+'分ほど過ぎます（最後は'+fmt(last.e)+'）。'+(lateN>1?lateN+'か所':'1か所')+'減らすか、終了時間を遅くしてください。');
+  else if(end-last.e>=90)tips.push('終了時間まで約'+Math.floor((end-last.e)/30)*30+'分の余裕があります。もう1か所足せそうです。');
+  const far=stops.filter(s=>s.tr&&s.tr.km>40);
+  if(far.length)tips.push('東京から離れた場所が含まれています。移動は片道'+far.map(s=>s.tr.min).join('・')+'分ほどかかります。');
+  tips.push(...tipsFor(stops));
+  renderPlan(out,{title:'選んだ'+sorted.length+'か所のプラン',lead:fmt(stops[0].s)+'〜'+fmt(last.e)+'。'+(hubs.length>1?'エリアは'+hubs.join(' ／ ')+'。':hubs[0]+'で回れます。')+'移動は合計約'+tt+'分で、近い順になるよう並べました。',days:[{label:null,stops}],tips,cost:cost(stops),stay:sorted.some(p=>p.kind==='stay')},end);
+};
+
+/* tabs */
+function showTab(which){
+  ['mood','list','rec'].forEach(k=>{$('#tab-'+k).setAttribute('aria-selected',String(k===which));$('#p-'+k).hidden=k!==which});
+}
+['mood','list','rec'].forEach(k=>{$('#tab-'+k).onclick=()=>showTab(k)});
+
+/* recommendations */
+$('#rec-intro').textContent='リストのお店(ピザ・麻婆豆腐や麻辣湯・うどん・海鮮丼・メキシコ料理・ビストロ系の居酒屋・パフェ)の傾向から、リストにないお店を選びました。評価はGoogleマップの値で、好みに合うかは行ってみないと分かりません。気になるものは「選ぶ」でリストから作るタブに入れられます。';
+const GENRES=['ピザ','麻婆豆腐・四川料理','麻辣湯','うどん','海鮮丼','メキシコ料理','ビストロ','串焼き','ケバブ','パフェ','パティスリー','カフェ','温泉・スーパー銭湯','焼肉','イタリアン','フレンチ'];
+const sa=$('#srch-area');sa.append(new Option('現在地の近く',''));
+HUBS.filter(x=>!x[4]).forEach(x=>sa.append(new Option(x[1],x[1].split('・')[0])));
+GENRES.forEach(g=>{
+  const a=h('a','chip link',g);a.target='_blank';a.rel='noopener';
+  const upd=()=>{const ar=sa.value;a.href='https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(ar?ar+' '+g:'近くの '+g)};
+  upd();sa.addEventListener('change',()=>GENRES.forEach(()=>0)||upd());
+  $('#genres').append(a);a._upd=upd;
+});
+sa.addEventListener('change',()=>$('#genres').querySelectorAll('a').forEach(a=>a._upd()));
+const recsEl=$('#recs');
+D.filter(p=>p.rec).forEach(p=>{
+  const c=h('article','rec');
+  c.append(h('h3',null,p.name));
+  c.append(h('p','meta',[HUB[p.hub].label,KINDS[p.kind],p.sub,'¥'.repeat(p.price),'★'+p.rating.toFixed(1)].join(' · ')));
+  c.append(h('p','why',p.note));
+  const act=h('div','acts');
+  const b=h('button','btn ghost sm','選ぶ');b.type='button';
+  b.onclick=()=>{if(sel.has(p.id)){sel.delete(p.id);b.textContent='選ぶ'}else{sel.add(p.id);b.textContent='選択中 ✓'}updCount();drawList()};
+  const a=h('a',null,'地図で開く');a.href=mapUrl(p);a.target='_blank';a.rel='noopener';
+  act.append(b,a);c.append(act);recsEl.append(c);
+});
+
+/* AI */
+const AIMSG={not_granted:'AIの利用が許可されていません。',sampling_disabled:'このアカウントではAIを使えません。',rate_limited:'しばらく待ってからもう一度試してください。',invalid_json:'うまく読み取れませんでした。言い方を変えてもう一度試してください。',refused:'この内容ではプランを作れませんでした。'};
+function aiPrompt(q,a,b){
+  const lines=D.map(p=>[p.id,p.name,HUB[p.hub].label,p.lat.toFixed(3)+','+p.lng.toFixed(3),KINDS[p.kind],p.sub,'価格'+p.price+'/5',p.rating?'★'+p.rating:'',p.out?'屋外':'屋内',(p.rec?'[リスト外のおすすめ]':'')+p.note.slice(0,40)].join('|')).join('\n');
+  return '2人のデートプランを作ってください。下のリストにある場所だけを使い、2〜6か所を選びます。\n条件: 開始'+a+'、終了'+b+'に収まること。座標(緯度,経度)を見て、移動が短くなる近い場所だけを現実的な順番で並べること。旅行や宿泊の相談でなければ、遠方(熱海・箱根・那須・軽井沢・大阪など)と宿は使わないこと。[リスト外のおすすめ]の店は多くて1〜2か所まで。価格は5段階(5が最高)。\n\n【相談内容】\n'+q+'\n\n【場所リスト】id|名前|エリア|座標|種別|ジャンル|価格|評価|屋内外|メモ\n'+lines+'\n\n次のJSONだけを返してください。\n{"title":"プラン名","comment":"一言コメント(80字以内)","stops":[{"id":数値,"reason":"この場所を選んだ理由(60字以内)"}],"tips":["予約などの注意(なければ空配列)"]}\n時間は不要です(こちらで移動時間から計算します)。';
+}
+let aiBusy=false;
+async function aiRun(sample){
+  const q=$('#ai-q').value.trim(),out=$('#out-ai');
+  if(!q){out.replaceChildren(h('p','msg','相談内容を入力してください。'));return}
+  if(!timesOk($('#start').value,$('#end').value,out))return;
+  if(aiBusy)return;aiBusy=true;$('#ai-go').disabled=true;
+  out.replaceChildren(h('p','msg','Makoto AIが考えています…'));
+  try{
+    const r=await sample.json(aiPrompt(q,$('#start').value,$('#end').value),{cache:false});
+    const seen=new Set(),ps=[],why2=new Map();
+    (Array.isArray(r.stops)?r.stops:[]).forEach(s=>{const p=D[Number(s.id)];if(p&&!seen.has(p.id)){seen.add(p.id);ps.push(p);why2.set(p.id,String(s.reason||''))}});
+    if(!ps.length)throw{code:'invalid_json'};
+    const stops=schedule(ps,$('#start').value);
+    stops.forEach(s=>{s.why=why2.get(s.p.id)});
+    const end=toMin($('#end').value),last=stops[stops.length-1],tips=(Array.isArray(r.tips)?r.tips:[]).map(String);
+    if(last.e>end+10)tips.unshift('移動時間を入れると終了時間('+$('#end').value+')を'+(last.e-end)+'分ほど過ぎます。');
+    renderPlan(out,{title:String(r.title||'AIのプラン'),lead:String(r.comment||'')+'（'+fmt(stops[0].s)+'〜'+fmt(last.e)+'、移動は合計約'+travelTotal(stops)+'分）',days:[{label:null,stops}],tips,cost:cost(stops)},end);
+  }catch(e){
+    out.replaceChildren(h('p','msg',AIMSG[e&&e.code]||'うまくいきませんでした。もう一度試してください。'));
+  }finally{aiBusy=false;$('#ai-go').disabled=false}
+}
+try{
+  const u=window.claude&&window.claude.use&&window.claude.use('sample');
+  if(u)u.then(s=>{if(s){$('#ai').hidden=false;$('#ai-go').onclick=()=>aiRun(s)}}).catch(()=>{});
+}catch(e){}
+
+drawList();
+run();
+</script>
+
+</body>
+</html>
